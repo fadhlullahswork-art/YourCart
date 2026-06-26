@@ -29,8 +29,10 @@ export default function SellerDashboard() {
   const navigate = useNavigate()
   const { user, profile, loading } = useAuth()
   const [tab, setTab] = useState('products')
+  const [hasPickedListingType, setHasPickedListingType] = useState(false)
   const [meSection, setMeSection] = useState(null)
   const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
+  const [showStoreSheet, setShowStoreSheet] = useState(false)
 
   const [storeName, setStoreName] = useState(profile?.verification?.storeName || '')
   const [category, setCategory] = useState(profile?.verification?.category || '')
@@ -46,13 +48,8 @@ export default function SellerDashboard() {
   const [orders, setOrders] = useState([])
   const [ordersLoading, setOrdersLoading] = useState(false)
 
-  const [serviceForm, setServiceForm] = useState({
-    title: '',
-    description: '',
-    category: '',
-    price: '',
-    deliveryTime: '',
-    image: null,
+ const [serviceForm, setServiceForm] = useState({
+    title: '', description: '', category: '', startingPrice: '', image: null,
   })
   const [serviceSubmitting, setServiceSubmitting] = useState(false)
   const [serviceError, setServiceError] = useState('')
@@ -79,6 +76,11 @@ export default function SellerDashboard() {
   useEffect(() => {
     localStorage.setItem('theme', dark ? 'dark' : 'light')
   }, [dark])
+  useEffect(() => {
+    if ((tab === 'products' || tab === 'services') && !hasPickedListingType) {
+      setShowStoreSheet(true)
+    }
+  }, [tab, hasPickedListingType])
 
   useEffect(() => {
     if (tab === 'products') loadProducts()
@@ -105,11 +107,11 @@ export default function SellerDashboard() {
     setServicesLoading(false)
   }
 
-  async function handleAddService(e) {
+async function handleAddService(e) {
     e.preventDefault()
     setServiceError('')
-    if (!serviceForm.title || !serviceForm.price || !serviceForm.category || !serviceForm.deliveryTime) {
-      setServiceError('Please fill in title, category, price, and delivery time.')
+    if (!serviceForm.title || !serviceForm.startingPrice || !serviceForm.category) {
+      setServiceError('Please fill in title, category, and starting price.')
       return
     }
     setServiceSubmitting(true)
@@ -120,8 +122,8 @@ export default function SellerDashboard() {
         title: serviceForm.title,
         description: serviceForm.description,
         category: serviceForm.category,
-        price: Number(serviceForm.price),
-        deliveryTime: serviceForm.deliveryTime,
+        startingPrice: Number(serviceForm.startingPrice),
+        sellerPhotoURL: profile?.photoURL || '',
         imageUrl,
         sellerId: user.uid,
         sellerName: profile?.verification?.storeName || profile?.name || 'Seller',
@@ -129,7 +131,7 @@ export default function SellerDashboard() {
         type: 'service',
         createdAt: serverTimestamp(),
       })
-      setServiceForm({ title: '', description: '', category: '', price: '', deliveryTime: '', image: null })
+      setServiceForm({ title: '', description: '', category: '', startingPrice: '', image: null })
       loadServices()
     } catch (err) {
       console.error(err)
@@ -271,15 +273,17 @@ export default function SellerDashboard() {
     input: dark ? 'bg-[#2e2e2e] border-[#444] text-gray-100 placeholder-gray-500' : 'border-line text-ink',
     banner: dark ? 'bg-[#2a2700]' : 'bg-yellow-pale',
     card: dark ? 'bg-[#252525] border-[#333]' : 'bg-white border-line',
+    sheet: dark ? 'bg-[#252525]' : 'bg-white',
     tab: (active) => active
       ? dark ? 'border-yellow-deep text-yellow-deep' : 'border-ink text-ink'
       : dark ? 'border-transparent text-gray-500' : 'border-transparent text-ink-soft',
-    btn: dark ? 'bg-yellow-deep text-ink hover:bg-yellow font-semibold px-6 py-3 rounded-full transition-colors disabled:opacity-60' : 'bg-ink text-white font-semibold px-6 py-3 rounded-full hover:bg-yellow-deep hover:text-ink transition-colors disabled:opacity-60',
+    btn: dark
+      ? 'bg-yellow-deep text-ink hover:bg-yellow font-semibold px-6 py-3 rounded-full transition-colors disabled:opacity-60'
+      : 'bg-ink text-white font-semibold px-6 py-3 rounded-full hover:bg-yellow-deep hover:text-ink transition-colors disabled:opacity-60',
     menuItem: dark ? 'border-[#333] hover:border-yellow-deep' : 'border-line hover:border-ink',
   }
 
   const verificationStatus = profile?.verification?.status || 'pending'
-
   const inputClass = `w-full border rounded-xl px-4 py-3 focus:outline-none focus:border-yellow-deep ${dm.input}`
 
   const storeProfileContent = (
@@ -307,7 +311,7 @@ export default function SellerDashboard() {
       ) : (
         <>
           {verificationStatus === 'rejected' && (
-            <div className={`border border-red-300 bg-red-50 rounded-2xl p-4 mb-5 ${dark ? 'bg-red-900/20 border-red-700' : ''}`}>
+            <div className={`border rounded-2xl p-4 mb-5 ${dark ? 'bg-red-900/20 border-red-700' : 'bg-red-50 border-red-300'}`}>
               <p className={`text-sm ${dark ? 'text-red-400' : 'text-red-700'}`}>Your last submission was rejected. Please check your details and resubmit.</p>
             </div>
           )}
@@ -417,15 +421,9 @@ export default function SellerDashboard() {
           <label className={`block text-sm font-medium mb-1.5 ${dm.text}`}>Category</label>
           <input value={serviceForm.category} onChange={(e) => setServiceForm({ ...serviceForm, category: e.target.value })} type="text" className={inputClass} placeholder="e.g. Design, Writing, Tech" />
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className={`block text-sm font-medium mb-1.5 ${dm.text}`}>Price (₦)</label>
-            <input value={serviceForm.price} onChange={(e) => setServiceForm({ ...serviceForm, price: e.target.value })} type="number" min="0" className={inputClass} placeholder="5000" />
-          </div>
-          <div>
-            <label className={`block text-sm font-medium mb-1.5 ${dm.text}`}>Delivery Time</label>
-            <input value={serviceForm.deliveryTime} onChange={(e) => setServiceForm({ ...serviceForm, deliveryTime: e.target.value })} type="text" className={inputClass} placeholder="e.g. 2 days" />
-          </div>
+      <div>
+          <label className={`block text-sm font-medium mb-1.5 ${dm.text}`}>Starting Price (₦)</label>
+          <input value={serviceForm.startingPrice} onChange={(e) => setServiceForm({ ...serviceForm, startingPrice: e.target.value })} type="number" min="0" className={inputClass} placeholder="5000" />
         </div>
         <div>
           <label className={`block text-sm font-medium mb-1.5 ${dm.text}`}>Service Image (optional)</label>
@@ -448,8 +446,7 @@ export default function SellerDashboard() {
               <div className="p-4">
                 <p className={`font-display font-semibold truncate ${dm.text}`}>{s.title}</p>
                 <p className={`text-xs mt-1 ${dm.textSoft}`}>{s.category}</p>
-                <p className={`font-bold mt-2 ${dm.text}`}>₦{Number(s.price).toLocaleString()}</p>
-                <p className={`text-xs mt-1 ${dm.textSoft}`}>Delivery: {s.deliveryTime}</p>
+               <p className={`font-bold mt-2 ${dm.text}`}>From ₦{Number(s.startingPrice).toLocaleString()}</p>
                 <button onClick={() => handleDeleteService(s.id)} className="text-sm font-semibold text-red-500 hover:underline mt-3">Remove</button>
               </div>
             </div>
@@ -483,6 +480,70 @@ export default function SellerDashboard() {
 
   return (
     <div className={`min-h-screen ${dm.page} transition-colors duration-300`}>
+
+      {/* Mobile store picker sheet */}
+     {showStoreSheet && (
+        <div
+          className="md:hidden"
+          style={{ position: 'fixed', inset: 0, zIndex: 99999 }}
+        >
+          <div
+            style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }}
+            onClick={() => setShowStoreSheet(false)}
+          />
+          <div
+            className={`rounded-t-3xl p-6 pb-8 ${dm.sheet}`}
+            style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}
+          >
+            <div className="flex items-center justify-between mb-5">
+              <h3 className={`font-display font-bold text-lg ${dm.text}`}>What are you listing?</h3>
+              <button
+                type="button"
+                onClick={() => setShowStoreSheet(false)}
+                className={`w-8 h-8 flex items-center justify-center rounded-full ${dm.textSoft}`}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+           <button
+                type="button"
+                onClick={() => {
+                  setTab('products')
+                  setShowStoreSheet(false)
+                  setHasPickedListingType(true)
+                }}
+                className={`flex flex-col items-center gap-2 border rounded-2xl py-5 transition-colors ${
+                  tab === 'products' ? 'border-yellow-deep bg-yellow-pale text-ink' : `${dm.border} ${dm.text}`
+                }`}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="2" y="3" width="20" height="14" rx="2" />
+                  <path d="M8 21h8M12 17v4" />
+                </svg>
+                <span className="text-sm font-semibold">Products</span>
+              </button>
+            <button
+                type="button"
+                onClick={() => {
+                  setTab('services')
+                  setShowStoreSheet(false)
+                  setHasPickedListingType(true)
+                }}
+                className={`flex flex-col items-center gap-2 border rounded-2xl py-5 transition-colors ${
+                  tab === 'services' ? 'border-yellow-deep bg-yellow-pale text-ink' : `${dm.border} ${dm.text}`
+                }`}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                </svg>
+                <span className="text-sm font-semibold">Services</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className={`border-b ${dm.header} transition-colors duration-300`}>
         <div className="max-w-6xl mx-auto px-5 md:px-8 h-16 flex items-center justify-between">
           <Link to="/" className={`font-display font-extrabold text-xl ${dm.text}`}>
@@ -490,8 +551,6 @@ export default function SellerDashboard() {
           </Link>
           <div className="flex items-center gap-4">
             <NotificationBell />
-
-            {/* Dark mode toggle */}
             <button
               onClick={() => setDark(!dark)}
               className={`w-9 h-9 flex items-center justify-center rounded-full border transition-colors ${dm.border} ${dm.textSoft} hover:text-yellow-deep`}
@@ -508,7 +567,6 @@ export default function SellerDashboard() {
                 </svg>
               )}
             </button>
-
             <div className="relative flex-shrink-0">
               <label className="w-9 h-9 rounded-full overflow-hidden bg-yellow-pale cursor-pointer block">
                 {profile?.photoURL ? (
@@ -522,7 +580,6 @@ export default function SellerDashboard() {
                 <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-600 rounded-full flex items-center justify-center text-white text-[9px] border-2 border-white">✓</span>
               )}
             </div>
-
             <span className={`text-sm hidden sm:inline ${dm.textSoft}`}>{profile?.name?.split(' ')[0] || 'Seller'}</span>
             <button onClick={handleLogout} className={`hidden sm:inline-flex text-sm font-semibold border px-4 py-2 rounded-full transition-colors ${dm.border} ${dm.textSoft} hover:text-yellow-deep`}>Log Out</button>
           </div>
@@ -577,16 +634,32 @@ export default function SellerDashboard() {
           {tab === 'me' ? 'Me' : tab}
         </h2>
 
-        <div className="mt-6 md:mt-8">
+      <div className="mt-6 md:mt-8">
           {tab === 'store' && storeProfileContent}
           {tab === 'verification' && verificationContent}
           {tab === 'payment' && paymentContent}
+
+          {(tab === 'products' || tab === 'services') && (
+            <div className="flex items-center justify-between mb-6">
+              <span className={`text-sm font-medium ${dm.textSoft}`}>
+                Showing: <span className={dm.text}>{tab === 'products' ? 'Products' : 'Services'}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowStoreSheet(true)}
+                className={`text-sm font-semibold px-4 py-2 rounded-full border transition-colors ${dm.border} ${dm.textSoft} hover:border-yellow-deep`}
+              >
+                Switch
+              </button>
+            </div>
+          )}
+
           {tab === 'services' && servicesContent}
 
           {tab === 'products' && (
             <div>
               <h2 className={`font-display font-semibold text-lg mb-4 hidden md:block ${dm.text}`}>Add a new product</h2>
-              <AddProductForm onAdded={loadProducts} />
+              <AddProductForm onAdded={loadProducts} dark={dark} />
               <h2 className={`font-display font-semibold text-lg mt-12 mb-4 ${dm.text}`}>Your products</h2>
               {productsLoading ? (
                 <p className={dm.textSoft}>Loading products...</p>
@@ -722,10 +795,23 @@ export default function SellerDashboard() {
       <BottomNav
         dark={dark}
         items={[
-          { label: 'Store', icon: 'store', onClick: () => setTab('products'), active: tab === 'products' },
+    {
+            label: 'Store',
+            icon: 'store',
+            onClick: () => {
+              setTab('products')
+              setShowStoreSheet(true)
+            },
+            active: tab === 'products' || tab === 'services',
+          },
           { label: 'Orders', icon: 'orders', onClick: () => setTab('orders'), active: tab === 'orders' },
           { label: 'Messages', icon: 'messages', onClick: () => setTab('messages'), active: tab === 'messages' },
-          { label: 'Me', icon: 'account', onClick: () => { setTab('me'); setMeSection(null) }, active: tab === 'me' },
+          {
+            label: 'Me',
+            icon: 'account',
+            onClick: () => { setTab('me'); setMeSection(null) },
+            active: tab === 'me',
+          },
         ]}
       />
       <div className="h-16 md:hidden" />
