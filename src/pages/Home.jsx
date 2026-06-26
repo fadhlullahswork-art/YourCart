@@ -1,6 +1,10 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { collection, getDocs, query, orderBy, doc, getDoc } from 'firebase/firestore'
+import { db } from '../firebase.js'
 import Navbar from '../components/Navbar.jsx'
 import Footer from '../components/Footer.jsx'
+import ProductCard from '../components/ProductCard.jsx'
 
 const whyCards = [
   {
@@ -38,6 +42,45 @@ const safetyCards = [
 ]
 
 export default function Home() {
+  const [products, setProducts] = useState([])
+  const [productsLoading, setProductsLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'))
+        const snap = await getDocs(q)
+        const productList = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+
+        const sellerIds = [...new Set(productList.map((p) => p.sellerId))]
+        const sellerSnaps = await Promise.all(
+          sellerIds.map((id) => getDoc(doc(db, 'users', id)))
+        )
+        const sellerMap = {}
+        sellerSnaps.forEach((s) => {
+          if (s.exists()) sellerMap[s.id] = s.data()
+        })
+
+        const updatedProducts = productList.map((p) => ({
+          ...p,
+          sellerPhotoURL: sellerMap[p.sellerId]?.photoURL || '',
+          sellerVerified: sellerMap[p.sellerId]?.verification?.status === 'approved',
+        }))
+
+        const sorted = [
+          ...updatedProducts.filter((p) => p.sellerVerified),
+          ...updatedProducts.filter((p) => !p.sellerVerified),
+        ].slice(0, 6)
+
+        setProducts(sorted)
+      } catch (err) {
+        console.error(err)
+      }
+      setProductsLoading(false)
+    }
+    loadProducts()
+  }, [])
+
   return (
     <div className="bg-white">
       <Navbar />
@@ -109,7 +152,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ESCROW — signature section */}
+      {/* ESCROW */}
       <section id="escrow" className="py-16 md:py-24 px-5 md:px-8 max-w-6xl mx-auto">
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div>
@@ -130,7 +173,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Connected step flow */}
           <div className="relative pl-8">
             <div className="absolute left-[11px] top-2 bottom-2 w-px bg-line" />
             <ol className="space-y-7">
@@ -227,12 +269,41 @@ export default function Home() {
 
       {/* PRODUCT PREVIEW */}
       <section className="py-16 md:py-24 px-5 md:px-8 max-w-6xl mx-auto">
-        <h2 className="font-display font-bold text-3xl md:text-4xl text-ink">Explore products</h2>
-
-        {/* No products yet — wired for real data later */}
-        <div className="mt-10 border border-dashed border-line rounded-3xl py-16 text-center">
-          <p className="text-ink-soft">No products available yet. Sellers will start adding products soon.</p>
+        <div className="flex items-center justify-between flex-wrap gap-4 mb-10">
+          <h2 className="font-display font-bold text-3xl md:text-4xl text-ink">Explore products</h2>
+          {products.length > 0 && (
+            <Link
+              to="/get-started"
+              className="text-sm font-semibold border border-line px-5 py-2.5 rounded-full hover:border-ink transition-colors"
+            >
+              View all
+            </Link>
+          )}
         </div>
+
+        {productsLoading ? (
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="rounded-2xl border border-line overflow-hidden animate-pulse">
+                <div className="aspect-square bg-yellow-pale" />
+                <div className="p-3 space-y-2">
+                  <div className="h-3 bg-line rounded-full w-3/4" />
+                  <div className="h-3 bg-line rounded-full w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : products.length === 0 ? (
+          <div className="border border-dashed border-line rounded-3xl py-16 text-center">
+            <p className="text-ink-soft">No products available yet. Sellers will start adding products soon.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+            {products.map((p) => (
+              <ProductCard key={p.id} product={p} linkTo={`/product/${p.id}`} />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* FINAL CTA */}

@@ -76,8 +76,9 @@ export default function AddProductForm({ onAdded }) {
         deliveryFee: Number(form.deliveryFee || 0),
         images: imageUrls,
         sellerId: user.uid,
-        sellerName: profile?.verification?.storeName || profile?.name || 'Seller',
+       sellerName: profile?.verification?.storeName || profile?.name || 'Seller',
         sellerVerified: profile?.verification?.status === 'approved',
+        sellerPhotoURL: profile?.photoURL || '',
         createdAt: serverTimestamp(),
       })
 

@@ -266,7 +266,7 @@ export default function MessageThread() {
             ← Back
           </Link>
         </div>
-      <div className="max-w-3xl mx-auto px-5 md:px-8 pb-4 flex items-center gap-3">
+     <div className="max-w-3xl mx-auto px-5 md:px-8 pb-4 flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl overflow-hidden bg-yellow-pale flex-shrink-0">
             {conversation.productImage ? (
               <img
@@ -279,8 +279,7 @@ export default function MessageThread() {
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-ink text-sm truncate">{conversation.productName}</p>
             <p className="text-xs text-ink-soft">
-              ₦{Number(conversation.productPrice || 0).toLocaleString()} ·{' '}
-              {isSeller ? conversation.buyerName : conversation.sellerName}
+              ₦{Number(conversation.productPrice || 0).toLocaleString()}
             </p>
           </div>
           {!isSeller && !isAdmin && (
@@ -292,6 +291,26 @@ export default function MessageThread() {
               {placingOrder ? 'Processing...' : `Pay ₦${Number(conversation.productPrice || 0).toLocaleString()}`}
             </button>
           )}
+        </div>
+
+        {/* Who you're chatting with */}
+        <div className="max-w-3xl mx-auto px-5 md:px-8 pb-3 flex items-center gap-2.5 border-t border-line pt-3">
+          <div className="w-8 h-8 rounded-full overflow-hidden bg-ink flex items-center justify-center flex-shrink-0">
+            {isSeller ? (
+              <span className="text-white text-xs font-semibold">
+                {(conversation.buyerName || '?').charAt(0).toUpperCase()}
+              </span>
+            ) : conversation.sellerPhotoURL ? (
+              <img src={conversation.sellerPhotoURL} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-white text-xs font-semibold">
+                {(conversation.sellerName || '?').charAt(0).toUpperCase()}
+              </span>
+            )}
+          </div>
+          <p className="text-sm font-medium text-ink">
+            {isSeller ? conversation.buyerName : conversation.sellerName}
+          </p>
         </div>
       </header>
 

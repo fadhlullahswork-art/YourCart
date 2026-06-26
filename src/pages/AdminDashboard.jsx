@@ -47,6 +47,11 @@ export default function AdminDashboard() {
     await updateDoc(doc(db, 'orders', orderId), { payoutStatus: 'paid_out', paidOutAt: new Date().toISOString() })
     setAllOrders(allOrders.map((o) => (o.id === orderId ? { ...o, payoutStatus: 'paid_out' } : o)))
   }
+  async function handleRefundOrder(orderId) {
+    if (!confirm('Refund this order to the buyer? This marks the order as refunded.')) return
+    await updateDoc(doc(db, 'orders', orderId), { status: 'refunded' })
+    setAllOrders(allOrders.map((o) => (o.id === orderId ? { ...o, status: 'refunded' } : o)))
+  }
 
   async function handleVerifyBankDetails(sellerId) {
     await updateDoc(doc(db, 'users', sellerId), { 'bankDetails.status': 'verified' })
@@ -124,9 +129,10 @@ export default function AdminDashboard() {
 
       <div className="max-w-6xl mx-auto px-5 md:px-8 flex flex-col md:flex-row gap-8 py-8">
         <nav className="flex md:flex-col gap-2 overflow-x-auto md:w-56 flex-shrink-0">
-          {[
+        {[
             { id: 'users', label: 'Users' },
             { id: 'verification', label: `Seller Verification${pendingSellers.length ? ` (${pendingSellers.length})` : ''}` },
+            { id: 'payouts', label: 'Payouts' },
             { id: 'products', label: 'Products' },
             { id: 'transactions', label: 'Transactions' },
             { id: 'disputes', label: 'Disputes' },
@@ -284,7 +290,48 @@ export default function AdminDashboard() {
               )}
             </div>
           )}
-
+          {tab === 'payouts' && (
+            <div>
+              {(() => {
+                const sellersWithBank = sellers.filter((s) => s.bankDetails)
+                return (
+                  <>
+                    <h2 className="font-display font-bold text-xl text-ink mb-4">
+                      Seller Bank Accounts ({sellersWithBank.length})
+                    </h2>
+                    {sellersWithBank.length === 0 ? (
+                      <p className="text-ink-soft">No sellers have added bank details yet.</p>
+                    ) : (
+                      <div className="space-y-3 max-w-2xl">
+                        {sellersWithBank.map((s) => (
+                          <div key={s.id} className="border border-line rounded-2xl p-4 flex items-center justify-between flex-wrap gap-3">
+                            <div>
+                              <p className="font-semibold text-ink text-sm">{s.name} · {s.verification?.storeName || 'No store'}</p>
+                              <p className="text-xs text-ink-soft mt-1">
+                                {s.bankDetails.bankName} · {s.bankDetails.accountNumber} · {s.bankDetails.accountName}
+                              </p>
+                            </div>
+                            {s.bankDetails.status === 'verified' ? (
+                              <span className="text-xs font-semibold bg-green-100 text-green-700 px-3 py-1.5 rounded-full">
+                                ✓ Verified
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => handleVerifyBankDetails(s.id)}
+                                className="text-xs font-semibold bg-ink text-white px-4 py-2 rounded-full hover:bg-yellow-deep hover:text-ink transition-colors"
+                              >
+                                Verify
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
+            </div>
+          )}
           {tab === 'transactions' && (
             <div>
               <h2 className="font-display font-bold text-xl text-ink mb-4">
@@ -306,7 +353,7 @@ export default function AdminDashboard() {
                         <th className="px-4 py-3 font-semibold text-ink">Payout</th>
                       </tr>
                     </thead>
-                    <tbody>
+                  <tbody>
                       {allOrders
                         .slice()
                         .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
@@ -330,20 +377,32 @@ export default function AdminDashboard() {
                                 {o.status}
                               </span>
                             </td>
-                            <td className="px-4 py-3">
-                              {o.status !== 'confirmed' ? (
-                                <span className="text-xs text-ink-soft">—</span>
+                           <td className="px-4 py-3">
+                              {o.status === 'refunded' ? (
+                                <span className="text-xs font-semibold bg-red-100 text-red-700 px-2.5 py-1 rounded-full">
+                                  Refunded
+                                </span>
                               ) : o.payoutStatus === 'paid_out' ? (
                                 <span className="text-xs font-semibold bg-green-100 text-green-700 px-2.5 py-1 rounded-full">
                                   Paid out
                                 </span>
+                              ) : o.status === 'confirmed' ? (
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleMarkPaidOut(o.id)}
+                                    className="text-xs font-semibold text-ink underline"
+                                  >
+                                    Pay seller
+                                  </button>
+                                  <button
+                                    onClick={() => handleRefundOrder(o.id)}
+                                    className="text-xs font-semibold text-red-600 underline"
+                                  >
+                                    Refund
+                                  </button>
+                                </div>
                               ) : (
-                                <button
-                                  onClick={() => handleMarkPaidOut(o.id)}
-                                  className="text-xs font-semibold text-ink underline"
-                                >
-                                  Mark as paid out
-                                </button>
+                                <span className="text-xs text-ink-soft">—</span>
                               )}
                             </td>
                           </tr>

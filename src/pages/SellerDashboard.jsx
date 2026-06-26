@@ -61,6 +61,7 @@ export default function SellerDashboard() {
   })
   const [verifySubmitting, setVerifySubmitting] = useState(false)
   const [verifyError, setVerifyError] = useState('')
+  const [photoUploading, setPhotoUploading] = useState(false)
 
   useEffect(() => {
     if (tab === 'products') loadProducts()
@@ -191,6 +192,21 @@ export default function SellerDashboard() {
         <p className="text-ink-soft">Loading...</p>
       </div>
     )
+  }
+ async function handlePhotoUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPhotoUploading(true)
+    try {
+      const url = await uploadToCloudinary(file)
+      await updateDoc(doc(db, 'users', user.uid), { photoURL: url })
+      window.location.reload()
+    } catch (err) {
+      console.error(err)
+      alert('Could not upload photo. Please try again.')
+      setPhotoUploading(false)
+    }
+    e.target.value = ''
   }
 
   const verificationStatus = profile?.verification?.status || 'pending'
@@ -426,14 +442,31 @@ export default function SellerDashboard() {
           <Link to="/" className="font-display font-extrabold text-xl text-ink">
             Your<span className="text-yellow-deep">Cart</span>
           </Link>
-          <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4">
             <NotificationBell />
+          <div className="relative flex-shrink-0">
+              <label className="w-9 h-9 rounded-full overflow-hidden bg-yellow-pale cursor-pointer block">
+                {profile?.photoURL ? (
+                  <img src={profile.photoURL} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-ink-soft text-xs">
+                    +
+                  </div>
+                )}
+                <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" disabled={photoUploading} />
+              </label>
+             {verificationStatus === 'approved' && (
+                <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-600 rounded-full flex items-center justify-center text-white text-[9px] border-2 border-white">
+                  ✓
+                </span>
+              )}
+            </div>
             <span className="text-sm text-ink-soft hidden sm:inline">
               {profile?.name?.split(' ')[0] || 'Seller'}
             </span>
             <button
               onClick={handleLogout}
-              className="text-sm font-semibold border border-line px-4 py-2 rounded-full hover:border-ink transition-colors"
+              className="hidden sm:inline-flex text-sm font-semibold border border-line px-4 py-2 rounded-full hover:border-ink transition-colors"
             >
               Log Out
             </button>

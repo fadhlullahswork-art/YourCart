@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
-import { collection, getDocs, query, orderBy } from 'firebase/firestore'
+import { collection, getDocs, query, orderBy, doc, getDoc } from 'firebase/firestore'
 import { auth, db } from '../firebase.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import ProductCard from '../components/ProductCard.jsx'
@@ -9,9 +9,8 @@ import NotificationBell from '../components/NotificationBell.jsx'
 import { useCart } from '../context/CartContext.jsx'
 import BottomNav from '../components/BottomNav.jsx'
 
-
 export default function CustomerDashboard() {
-    const { itemCount } = useCart()
+  const { itemCount } = useCart()
   const navigate = useNavigate()
   const { profile, loading } = useAuth()
 
@@ -28,7 +27,24 @@ export default function CustomerDashboard() {
     try {
       const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'))
       const snap = await getDocs(q)
-      setProducts(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+      const productList = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+
+      const sellerIds = [...new Set(productList.map((p) => p.sellerId))]
+      const sellerSnaps = await Promise.all(
+        sellerIds.map((id) => getDoc(doc(db, 'users', id)))
+      )
+      const sellerMap = {}
+      sellerSnaps.forEach((snap) => {
+        if (snap.exists()) sellerMap[snap.id] = snap.data()
+      })
+
+      const updatedProducts = productList.map((p) => ({
+        ...p,
+        sellerPhotoURL: sellerMap[p.sellerId]?.photoURL || '',
+        sellerVerified: sellerMap[p.sellerId]?.verification?.status === 'approved',
+      }))
+
+      setProducts(updatedProducts)
     } catch (err) {
       console.error(err)
     }
@@ -59,7 +75,7 @@ export default function CustomerDashboard() {
           <Link to="/" className="font-display font-extrabold text-xl text-ink">
             Your<span className="text-yellow-deep">Cart</span>
           </Link>
-     <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4">
             <Link to="/customer/orders" className="text-sm font-semibold text-ink-soft hover:text-ink hidden sm:inline">
               My Orders
             </Link>
@@ -75,7 +91,7 @@ export default function CustomerDashboard() {
                 </span>
               )}
             </Link>
-          <NotificationBell />
+            <NotificationBell />
             <Link
               to="/customer/account"
               className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-yellow-pale transition-colors"
@@ -91,7 +107,7 @@ export default function CustomerDashboard() {
             </span>
             <button
               onClick={handleLogout}
-              className="text-sm font-semibold border border-line px-4 py-2 rounded-full hover:border-ink transition-colors"
+              className="hidden sm:inline-flex text-sm font-semibold border border-line px-4 py-2 rounded-full hover:border-ink transition-colors"
             >
               Log Out
             </button>
@@ -100,24 +116,25 @@ export default function CustomerDashboard() {
       </header>
 
       <main className="max-w-6xl mx-auto px-5 md:px-8 py-10">
-        <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex flex-col gap-4">
           <div>
             <h1 className="font-display font-bold text-2xl md:text-3xl text-ink">
               Welcome back, {profile?.name?.split(' ')[0] || 'there'}
             </h1>
             <p className="text-ink-soft mt-2">Browse products from trusted sellers across Nigeria.</p>
           </div>
-          <div className="bg-yellow-pale rounded-2xl p-5 mt-6 flex items-start gap-3">
-          <span className="text-xl">🔒</span>
-          <div>
-            <p className="text-sm font-semibold text-ink">How your payment is protected</p>
-            <p className="text-xs text-ink-soft mt-1">
-              When you pay for an item, YourCart holds the money safely — it isn't released to the
-              seller until you confirm you've received your order. If anything goes wrong, you can
-              report an issue and our team will step in.
-            </p>
+
+          <div className="bg-yellow-pale rounded-2xl p-5 flex items-start gap-3">
+            <span className="text-xl">🔒</span>
+            <div>
+              <p className="text-sm font-semibold text-ink">How your payment is protected</p>
+              <p className="text-xs text-ink-soft mt-1">
+                When you pay for an item, YourCart holds the money safely — it isn't released to the
+                seller until you confirm you've received your order. If anything goes wrong, you can
+                report an issue and our team will step in.
+              </p>
+            </div>
           </div>
-        </div>
 
           <input
             type="text"
@@ -129,7 +146,17 @@ export default function CustomerDashboard() {
         </div>
 
         {productsLoading ? (
-          <p className="text-ink-soft mt-10">Loading products...</p>
+          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 mt-10">
+            {[...Array(12)].map((_, i) => (
+              <div key={i} className="rounded-2xl border border-line overflow-hidden animate-pulse">
+                <div className="aspect-square bg-yellow-pale" />
+                <div className="p-3 space-y-2">
+                  <div className="h-3 bg-line rounded-full w-3/4" />
+                  <div className="h-3 bg-line rounded-full w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : filteredProducts.length === 0 ? (
           <div className="mt-10 border border-dashed border-line rounded-3xl py-16 text-center">
             <p className="text-ink-soft">
@@ -139,13 +166,13 @@ export default function CustomerDashboard() {
             </p>
           </div>
         ) : (
-          <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 mt-10">
+          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 mt-10">
             {filteredProducts.map((p) => (
               <ProductCard key={p.id} product={p} linkTo={`/product/${p.id}`} />
             ))}
           </div>
         )}
-     </main>
+      </main>
 
       <BottomNav
         items={[

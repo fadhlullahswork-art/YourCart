@@ -27,11 +27,15 @@ export default function ProductDetails() {
     if (snap.exists()) {
       const productData = { id: snap.id, ...snap.data() }
 
-      // Always check the seller's CURRENT verification status, not a stored snapshot
+      // Always check the seller's CURRENT photo + verification status, not a stored snapshot
       const sellerSnap = await getDoc(doc(db, 'users', productData.sellerId))
-      const isVerified = sellerSnap.exists() && sellerSnap.data()?.verification?.status === 'approved'
+      const sellerData = sellerSnap.exists() ? sellerSnap.data() : null
 
-      setProduct({ ...productData, sellerVerified: isVerified })
+      setProduct({
+        ...productData,
+        sellerVerified: sellerData?.verification?.status === 'approved',
+        sellerPhotoURL: sellerData?.photoURL || '',
+      })
     }
     setLoading(false)
   }
@@ -54,11 +58,12 @@ export default function ProductDetails() {
     }
 
     // Otherwise create a new conversation
-  const newConvo = await addDoc(collection(db, 'conversations'), {
+ const newConvo = await addDoc(collection(db, 'conversations'), {
       buyerId: user.uid,
       buyerName: profile?.name || 'Buyer',
       sellerId: product.sellerId,
       sellerName: product.sellerName || 'Seller',
+      sellerPhotoURL: product.sellerPhotoURL || '',
       productId: product.id,
       productName: product.name,
       productImage: product.images?.[0] || '',
@@ -102,7 +107,7 @@ export default function ProductDetails() {
 
       <main className="max-w-6xl mx-auto px-5 md:px-8 py-10">
         <div className="grid md:grid-cols-2 gap-10">
-          {/* Images */}
+        {/* Images */}
           <div>
             <div className="aspect-square rounded-3xl overflow-hidden bg-yellow-pale">
               {product.images?.[activeImage] ? (
@@ -132,10 +137,43 @@ export default function ProductDetails() {
                 ))}
               </div>
             )}
-          </div>
 
-          {/* Details */}
+           </div>
+
+         {/* Details */}
           <div>
+           {/* Seller info — sits at the top of the details column, beside the images */}
+            <Link
+              to={`/seller/${product.sellerId}`}
+              className="flex items-center gap-3 mb-5 group"
+            >
+              <div className="relative flex-shrink-0">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden bg-ink flex items-center justify-center ring-2 ring-line group-hover:ring-yellow transition-all">
+                  {product.sellerPhotoURL ? (
+                    <img src={product.sellerPhotoURL} alt={product.sellerName} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-white text-lg sm:text-xl font-semibold">
+                      {(product.sellerName || '?').charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                {product.sellerVerified && (
+                  <span className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-green-600 rounded-full border-2 border-white flex items-center justify-center text-white text-[10px] sm:text-xs font-bold">
+                    ✓
+                  </span>
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="text-base font-semibold text-ink leading-tight truncate group-hover:underline">
+                  {product.sellerName}
+                </p>
+                <p className="text-sm text-ink-soft leading-tight mt-0.5">
+                  {product.sellerVerified ? 'Verified Seller' : 'Not yet verified'}
+                  {product.location ? ` · ${product.location}` : ''}
+                </p>
+              </div>
+            </Link>
+
             <h1 className="font-display font-bold text-2xl md:text-3xl text-ink">{product.name}</h1>
 
             <div className="flex items-center gap-2 mt-3">
@@ -160,22 +198,7 @@ export default function ProductDetails() {
               )}
             </div>
 
-            {/* Seller info */}
-            <div className="border border-line rounded-2xl p-4 mt-6 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-ink">{product.sellerName}</p>
-                <p className="text-xs text-ink-soft">Seller</p>
-              </div>
-              {product.sellerVerified ? (
-                <span className="text-xs font-semibold bg-green-100 text-green-700 px-3 py-1.5 rounded-full">
-                  ✓ Verified Seller
-                </span>
-              ) : (
-                <span className="text-xs font-semibold bg-line/60 text-ink-soft px-3 py-1.5 rounded-full">
-                  Not yet verified
-                </span>
-              )}
-            </div>
+         
 
           <div className="flex flex-wrap gap-3 mt-6">
               <button

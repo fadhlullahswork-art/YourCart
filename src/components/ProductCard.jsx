@@ -18,8 +18,22 @@ export default function ProductCard({ product, actions, linkTo }) {
         <p className="text-xs text-ink-soft mt-1">
           Delivery: ₦{Number(product.deliveryFee || 0).toLocaleString()}
         </p>
-        {product.sellerName && (
-          <p className="text-xs text-ink-soft mt-2">Sold by {product.sellerName}</p>
+       {product.sellerName && (
+          <div className="flex items-center gap-1.5 mt-2">
+            <div className="relative w-5 h-5 flex-shrink-0">
+              <div className="w-5 h-5 rounded-full overflow-hidden bg-yellow-pale">
+                {product.sellerPhotoURL && (
+                  <img src={product.sellerPhotoURL} alt="" className="w-full h-full object-cover" />
+                )}
+              </div>
+           {product.sellerVerified && (
+                <span className="absolute -bottom-1.5 -right-1.5 w-4 h-4 bg-green-600 rounded-full border-2 border-white flex items-center justify-center text-white text-[8px] font-bold leading-none">
+                  ✓
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-ink-soft truncate">{product.sellerName}</p>
+          </div>
         )}
         {actions && <div className="mt-3">{actions}</div>}
       </div>
