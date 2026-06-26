@@ -40,17 +40,23 @@ const icons = {
   ),
 }
 
-export default function BottomNav({ items }) {
+export default function BottomNav({ items, dark }) {
   const location = useLocation()
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-40 bg-white border-t border-line md:hidden">
+    <nav className={`fixed bottom-0 inset-x-0 z-40 border-t md:hidden transition-colors duration-300 ${
+      dark ? 'bg-[#1e1e1e] border-[#333]' : 'bg-white border-line'
+    }`}>
       <div className="grid grid-cols-4 max-w-6xl mx-auto">
         {items.map((item) => {
           const isActive =
             typeof item.active === 'boolean' ? item.active : location.pathname === item.to
-          const className = `flex flex-col items-center justify-center gap-1 py-2.5 ${
-            isActive ? 'text-ink' : 'text-ink-soft'
+          const className = `flex flex-col items-center justify-center gap-1 py-2.5 transition-colors ${
+            isActive
+              ? 'text-yellow-deep'
+              : dark
+              ? 'text-gray-500'
+              : 'text-ink-soft'
           }`
 
           if (item.onClick) {
