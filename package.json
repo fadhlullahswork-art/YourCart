@@ -3,11 +3,22 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5175 && electron .\"",
+    "electron:build": "vite build && electron-builder"
+  },
+  "build": {
+    "appId": "com.yourcart.app",
+    "productName": "YourCart",
+    "files": ["dist/**/*", "electron/**/*"],
+    "win": { "target": "nsis" },
+    "mac": { "target": "dmg" },
+    "linux": { "target": "AppImage" }
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.1",
@@ -21,7 +32,11 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
+    "concurrently": "^10.0.3",
+    "electron": "^42.5.0",
+    "electron-builder": "^26.15.3",
     "oxlint": "^1.69.0",
-    "vite": "^8.1.0"
+    "vite": "^8.1.0",
+    "wait-on": "^9.0.10"
   }
 }
