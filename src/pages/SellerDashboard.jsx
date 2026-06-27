@@ -8,6 +8,7 @@ import { auth, db } from '../firebase.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import AddProductForm from '../components/AddProductForm.jsx'
 import ProductCard from '../components/ProductCard.jsx'
+import { useTheme } from '../context/ThemeContext.jsx'
 
 const CLOUDINARY_CLOUD_NAME = 'dzbn1ymxq'
 const CLOUDINARY_UPLOAD_PRESET = 'yourcart_unsigned'
@@ -31,7 +32,7 @@ export default function SellerDashboard() {
   const [tab, setTab] = useState('products')
   const [hasPickedListingType, setHasPickedListingType] = useState(false)
   const [meSection, setMeSection] = useState(null)
-  const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
+  const { dark, setDark } = useTheme()
   const [showStoreSheet, setShowStoreSheet] = useState(false)
 
   const [storeName, setStoreName] = useState(profile?.verification?.storeName || '')
@@ -73,9 +74,7 @@ export default function SellerDashboard() {
   const [verifyError, setVerifyError] = useState('')
   const [photoUploading, setPhotoUploading] = useState(false)
 
-  useEffect(() => {
-    localStorage.setItem('theme', dark ? 'dark' : 'light')
-  }, [dark])
+ 
   useEffect(() => {
     if ((tab === 'products' || tab === 'services') && !hasPickedListingType) {
       setShowStoreSheet(true)

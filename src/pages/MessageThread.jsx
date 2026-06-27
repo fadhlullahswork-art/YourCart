@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '../firebase.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useTheme } from '../context/ThemeContext.jsx'
 import { payWithPaystack } from '../paystack.js'
 
 const CLOUDINARY_CLOUD_NAME = 'dzbn1ymxq'
@@ -42,6 +43,7 @@ function formatTime(seconds) {
 export default function MessageThread() {
   const { id } = useParams()
   const { user, profile } = useAuth()
+  const { dark } = useTheme()
 
   const [conversation, setConversation] = useState(null)
   const [messages, setMessages] = useState([])
@@ -52,12 +54,23 @@ export default function MessageThread() {
   const bottomRef = useRef(null)
   const fileInputRef = useRef(null)
 
-  // Voice recording state
   const [isRecording, setIsRecording] = useState(false)
   const [recordSeconds, setRecordSeconds] = useState(0)
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
   const timerRef = useRef(null)
+
+  const dm = {
+    page: dark ? 'bg-[#1e1e1e]' : 'bg-white',
+    header: dark ? 'bg-[#252525] border-[#333]' : 'bg-white border-line',
+    text: dark ? 'text-gray-100' : 'text-ink',
+    textSoft: dark ? 'text-gray-400' : 'text-ink-soft',
+    border: dark ? 'border-[#333]' : 'border-line',
+    input: dark ? 'bg-[#2e2e2e] border-[#444] text-gray-100 placeholder-gray-500' : 'border-line text-ink',
+    bubbleOther: dark ? 'bg-[#2e2e2e] text-gray-100' : 'bg-yellow-pale text-ink',
+    recordBar: dark ? 'bg-[#2e2e2e]' : 'bg-yellow-pale',
+    iconBtn: dark ? 'border-[#444] text-gray-300 hover:border-yellow-deep' : 'border-line hover:border-ink',
+  }
 
   useEffect(() => {
     async function loadConvo() {
@@ -112,7 +125,8 @@ export default function MessageThread() {
     setText('')
     await sendMessage({ type: 'text', text: messageText })
   }
- async function handleBuyNow() {
+
+  async function handleBuyNow() {
     setPlacingOrder(true)
     try {
       payWithPaystack({
@@ -142,7 +156,6 @@ export default function MessageThread() {
               createdAt: serverTimestamp(),
             })
 
-            // Drop a system-style message into the chat so both sides see it happened
             await sendMessage({
               type: 'text',
               text: `✅ Payment of ₦${Number(conversation.productPrice || 0).toLocaleString()} received. Order placed.`,
@@ -168,6 +181,7 @@ export default function MessageThread() {
       setPlacingOrder(false)
     }
   }
+
   async function handleImagePick(e) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -199,7 +213,7 @@ export default function MessageThread() {
           setSending(true)
           try {
             const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' })
-            const url = await uploadToCloudinary(file, 'video') // Cloudinary stores audio under "video" resource type
+            const url = await uploadToCloudinary(file, 'video')
             await sendMessage({ type: 'audio', audioUrl: url })
           } catch (err) {
             console.error(err)
@@ -240,33 +254,33 @@ export default function MessageThread() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-ink-soft">Loading...</p>
+      <div className={`min-h-screen flex items-center justify-center ${dm.page}`}>
+        <p className={dm.textSoft}>Loading...</p>
       </div>
     )
   }
 
   if (!conversation) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-ink-soft">Conversation not found.</p>
+      <div className={`min-h-screen flex items-center justify-center ${dm.page}`}>
+        <p className={dm.textSoft}>Conversation not found.</p>
       </div>
     )
   }
 
- const isSeller = profile?.role === 'seller'
+  const isSeller = profile?.role === 'seller'
   const isAdmin = profile?.role === 'admin'
   const backTo = isAdmin ? '/admin/dashboard' : isSeller ? '/seller/dashboard' : '/customer/dashboard'
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      <header className="border-b border-line">
+    <div className={`min-h-screen ${dm.page} flex flex-col transition-colors duration-300`}>
+      <header className={`border-b ${dm.header}`}>
         <div className="max-w-3xl mx-auto px-5 md:px-8 h-16 flex items-center justify-between">
-          <Link to={backTo} className="text-sm font-semibold text-ink-soft hover:text-ink">
+          <Link to={backTo} className={`text-sm font-semibold ${dm.textSoft} hover:text-yellow-deep`}>
             ← Back
           </Link>
         </div>
-     <div className="max-w-3xl mx-auto px-5 md:px-8 pb-4 flex items-center gap-3">
+        <div className="max-w-3xl mx-auto px-5 md:px-8 pb-4 flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl overflow-hidden bg-yellow-pale flex-shrink-0">
             {conversation.productImage ? (
               <img
@@ -277,8 +291,8 @@ export default function MessageThread() {
             ) : null}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-ink text-sm truncate">{conversation.productName}</p>
-            <p className="text-xs text-ink-soft">
+            <p className={`font-semibold text-sm truncate ${dm.text}`}>{conversation.productName}</p>
+            <p className={`text-xs ${dm.textSoft}`}>
               ₦{Number(conversation.productPrice || 0).toLocaleString()}
             </p>
           </div>
@@ -293,8 +307,7 @@ export default function MessageThread() {
           )}
         </div>
 
-        {/* Who you're chatting with */}
-        <div className="max-w-3xl mx-auto px-5 md:px-8 pb-3 flex items-center gap-2.5 border-t border-line pt-3">
+        <div className={`max-w-3xl mx-auto px-5 md:px-8 pb-3 flex items-center gap-2.5 border-t pt-3 ${dm.border}`}>
           <div className="w-8 h-8 rounded-full overflow-hidden bg-ink flex items-center justify-center flex-shrink-0">
             {isSeller ? (
               <span className="text-white text-xs font-semibold">
@@ -308,7 +321,7 @@ export default function MessageThread() {
               </span>
             )}
           </div>
-          <p className="text-sm font-medium text-ink">
+          <p className={`text-sm font-medium ${dm.text}`}>
             {isSeller ? conversation.buyerName : conversation.sellerName}
           </p>
         </div>
@@ -316,7 +329,7 @@ export default function MessageThread() {
 
       <main className="flex-1 max-w-3xl w-full mx-auto px-5 md:px-8 py-6 overflow-y-auto">
         {messages.length === 0 ? (
-          <p className="text-ink-soft text-sm text-center mt-10">
+          <p className={`text-sm text-center mt-10 ${dm.textSoft}`}>
             No messages yet. Say hello and ask about this product.
           </p>
         ) : (
@@ -330,10 +343,10 @@ export default function MessageThread() {
                       m.type === 'image' || m.type === 'audio'
                         ? isMine
                           ? 'bg-ink'
-                          : 'bg-yellow-pale'
+                          : dm.bubbleOther
                         : isMine
                         ? 'bg-ink text-white px-4 py-2.5'
-                        : 'bg-yellow-pale text-ink px-4 py-2.5'
+                        : `${dm.bubbleOther} px-4 py-2.5`
                     }`}
                   >
                     {m.type === 'image' && (
@@ -361,19 +374,18 @@ export default function MessageThread() {
         <div ref={bottomRef} />
       </main>
 
-      {/* Input bar */}
-      <div className="border-t border-line p-4">
+      <div className={`border-t p-4 ${dm.border}`}>
         <div className="max-w-3xl mx-auto">
           {isRecording ? (
-            <div className="flex items-center gap-3 bg-yellow-pale rounded-full px-4 py-3">
+            <div className={`flex items-center gap-3 rounded-full px-4 py-3 ${dm.recordBar}`}>
               <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse" />
-              <span className="text-sm font-medium text-ink flex-1">
+              <span className={`text-sm font-medium flex-1 ${dm.text}`}>
                 Recording... {formatTime(recordSeconds)}
               </span>
               <button
                 type="button"
                 onClick={cancelRecording}
-                className="text-sm font-semibold text-ink-soft hover:text-ink"
+                className={`text-sm font-semibold ${dm.textSoft} hover:text-yellow-deep`}
               >
                 Cancel
               </button>
@@ -398,7 +410,7 @@ export default function MessageThread() {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={sending}
-                className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-full border border-line hover:border-ink transition-colors disabled:opacity-50"
+                className={`w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-full border transition-colors disabled:opacity-50 ${dm.iconBtn}`}
                 aria-label="Attach image"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -414,7 +426,7 @@ export default function MessageThread() {
                 type="text"
                 placeholder="Type a message..."
                 disabled={sending}
-                className="flex-1 border border-line rounded-full px-4 py-3 text-sm focus:outline-none focus:border-ink disabled:opacity-60"
+                className={`flex-1 border rounded-full px-4 py-3 text-sm focus:outline-none focus:border-yellow-deep disabled:opacity-60 ${dm.input}`}
               />
 
               {text.trim() ? (
@@ -441,9 +453,9 @@ export default function MessageThread() {
               )}
             </form>
           )}
-          {sending && <p className="text-xs text-ink-soft mt-2">Sending...</p>}
+          {sending && <p className={`text-xs mt-2 ${dm.textSoft}`}>Sending...</p>}
         </div>
       </div>
     </div>
   )
-}
+} 

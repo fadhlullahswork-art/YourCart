@@ -3,10 +3,22 @@ import { Link } from 'react-router-dom'
 import { collection, query, where, onSnapshot } from 'firebase/firestore'
 import { db } from '../firebase.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useTheme } from '../context/ThemeContext.jsx'
+import BottomNav from '../components/BottomNav.jsx'
 
 export default function CustomerMessages() {
   const { user } = useAuth()
+  const { dark } = useTheme()
   const [conversations, setConversations] = useState([])
+
+  const dm = {
+    page: dark ? 'bg-[#1e1e1e]' : 'bg-white',
+    header: dark ? 'bg-[#252525] border-[#333]' : 'bg-white border-line',
+    text: dark ? 'text-gray-100' : 'text-ink',
+    textSoft: dark ? 'text-gray-400' : 'text-ink-soft',
+    border: dark ? 'border-[#333]' : 'border-line',
+    card: dark ? 'bg-[#252525] border-[#333]' : 'bg-white border-line',
+  }
 
   useEffect(() => {
     if (!user) return
@@ -18,21 +30,21 @@ export default function CustomerMessages() {
   }, [user])
 
   return (
-    <div className="min-h-screen bg-white">
-      <header className="border-b border-line">
+    <div className={`min-h-screen ${dm.page} transition-colors duration-300`}>
+      <header className={`border-b ${dm.header}`}>
         <div className="max-w-3xl mx-auto px-5 md:px-8 h-16 flex items-center justify-between">
-          <Link to="/customer/dashboard" className="font-display font-extrabold text-xl text-ink">
+          <Link to="/customer/dashboard" className={`font-display font-extrabold text-xl ${dm.text}`}>
             Your<span className="text-yellow-deep">Cart</span>
           </Link>
         </div>
       </header>
 
       <main className="max-w-3xl mx-auto px-5 md:px-8 py-8">
-        <h1 className="font-display font-bold text-2xl text-ink mb-6">Messages</h1>
+        <h1 className={`font-display font-bold text-2xl mb-6 ${dm.text}`}>Messages</h1>
 
         {conversations.length === 0 ? (
-          <div className="border border-dashed border-line rounded-3xl py-16 text-center">
-            <p className="text-ink-soft">
+          <div className={`border border-dashed rounded-3xl py-16 text-center ${dm.border}`}>
+            <p className={dm.textSoft}>
               No conversations yet. Message a seller from a product page to get started.
             </p>
           </div>
@@ -45,7 +57,7 @@ export default function CustomerMessages() {
                 <Link
                   key={c.id}
                   to={`/messages/${c.id}`}
-                  className="flex items-center gap-3 border border-line rounded-2xl p-4 hover:border-ink transition-colors"
+                  className={`flex items-center gap-3 border rounded-2xl p-4 transition-colors ${dm.card} hover:border-yellow-deep`}
                 >
                   <div className="w-12 h-12 rounded-xl overflow-hidden bg-yellow-pale flex-shrink-0">
                     {c.productImage && (
@@ -53,8 +65,8 @@ export default function CustomerMessages() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-ink truncate">{c.productName}</p>
-                    <p className="text-xs text-ink-soft truncate">
+                    <p className={`text-sm font-semibold truncate ${dm.text}`}>{c.productName}</p>
+                    <p className={`text-xs truncate ${dm.textSoft}`}>
                       {c.sellerName}: {c.lastMessage || 'No messages yet'}
                     </p>
                   </div>
@@ -64,6 +76,15 @@ export default function CustomerMessages() {
         )}
       </main>
 
+      <BottomNav
+        dark={dark}
+        items={[
+          { to: '/customer/dashboard', label: 'Home', icon: 'home' },
+          { to: '/cart', label: 'Cart', icon: 'cart' },
+          { to: '/customer/orders', label: 'Orders', icon: 'orders' },
+          { to: '/customer/messages', label: 'Messages', icon: 'messages' },
+        ]}
+      />
       <div className="h-16 md:hidden" />
     </div>
   )

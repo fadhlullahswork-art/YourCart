@@ -8,6 +8,7 @@ import ProductCard from '../components/ProductCard.jsx'
 import NotificationBell from '../components/NotificationBell.jsx'
 import { useCart } from '../context/CartContext.jsx'
 import BottomNav from '../components/BottomNav.jsx'
+import { useTheme } from '../context/ThemeContext.jsx'
 
 export default function CustomerDashboard() {
   const { itemCount } = useCart()
@@ -21,7 +22,7 @@ export default function CustomerDashboard() {
   const [servicesLoading, setServicesLoading] = useState(false)
   const [search, setSearch] = useState('')
   const [showBanner, setShowBanner] = useState(true)
-  const [dark, setDark] = useState(() => localStorage.getItem('yourcart_dark') === 'true')
+  const { dark, setDark } = useTheme()
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
